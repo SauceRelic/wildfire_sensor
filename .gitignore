@@ -1,9 +1,4 @@
-# Espressif specific to only include .c, .h, and readme files
-*.projbuild
-**/CMakeLists.txt
+# Espressif IDF projects, exclude build files and Eclipse metadata
 **/build/
-*.cproject
-*.project
-**/LICENSE
 **/sdkconfig
 /.metadata/
