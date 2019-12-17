@@ -1,4 +1,4 @@
 # Espressif IDF projects, exclude build files and Eclipse metadata
-**/build/
+**/build/*
 **/sdkconfig
 /.metadata/
