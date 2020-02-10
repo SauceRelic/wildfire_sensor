@@ -1,12 +1,3 @@
-/*
-  Servo Working code
-
-  This code first configures timer 0 to generated 50Hz signal of repeat after 20ms.
-  Then we used LEDC channel 0 to work with timer 0 and PIn 18 (Servo PIN).
-  The code then keeps on generating pulse correspond to duty cycle for angles 0, 45, 90, 135 and 180 degree
-  after delay of 1.5 seconds. Which  positions the servo at these angles.
-  The process keeps on repeating and servo keeps on changing its position after every 1.5 seconds.
- */
 #include <stdio.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -15,67 +6,125 @@
 #include "sdkconfig.h"
 #include "esp_log.h"
 
-//Variables to be used by Servo Motor
-// Delay to wait wach Servo Stop (milliseconds)
-#define SERVO_DELAY 1500
-// Recommended PWM GPIO pins on the ESP32 include 2,4,12-19,21-23,25-27,32-33
-#define SERVO_PIN 18
-// Servo Stop Angles
-#define SERVO_ANGLE_COUNT 8
-const int servo_angles[SERVO_ANGLE_COUNT] = { 0, 45, 90, 135, 180, 135, 90, 45 };
-// create servo object to control a servo
+#define NOP() asm volatile ("nop")
 
-static char tag[] = "servo1";
+#define PIN_A 4
+#define PIN_B 16
+#define PIN_C 17
+#define PIN_D 5
 
-void moveServo_task(void *ignore) {
-	int bitSize = 15;
-	int minValue = 600;  // microseconds (uS)
-	int maxValue = 3500; // microseconds (uS)
-	int duty = (1 << bitSize) * minValue / 20000;
-	int steps = 180;	// Total Degrees
+#define SPEED_RPM 100
+#define REV_STEPS 200
+#define STOP_TIME 500
+const uint32_t step_delay = (60 * 1000* 1000) / (REV_STEPS * SPEED_RPM);
+int step_number = 0;
 
-	//Setup 50Hz Wave using Timer 0
-	ledc_timer_config_t timer_conf;
-	timer_conf.duty_resolution = LEDC_TIMER_15_BIT;
-	timer_conf.freq_hz = 50;
-	timer_conf.speed_mode = LEDC_HIGH_SPEED_MODE;
-	timer_conf.timer_num = LEDC_TIMER_0;
-	ledc_timer_config(&timer_conf);
+unsigned long IRAM_ATTR micros();
+void IRAM_ATTR delayMicroseconds(uint32_t us);
+void stepMotor(int thisStep);
+void step(int steps_to_move);
 
-	//Setup LECD Channel 0 to work with Timer 0 on GPIO 16
-	ledc_channel_config_t ledc_conf;
-	ledc_conf.channel = LEDC_CHANNEL_0;
-	ledc_conf.duty = duty;
-	ledc_conf.gpio_num = SERVO_PIN;
-	ledc_conf.intr_type = LEDC_INTR_DISABLE;
-	ledc_conf.speed_mode = LEDC_HIGH_SPEED_MODE;
-	ledc_conf.timer_sel = LEDC_TIMER_0;
-	ledc_channel_config(&ledc_conf);
-	int current_angle_index = 0;
+void app_main()
+{
+    gpio_pad_select_gpio(PIN_A);
+    gpio_set_direction(PIN_A, GPIO_MODE_OUTPUT);
+    gpio_pad_select_gpio(PIN_B);
+    gpio_set_direction(PIN_B, GPIO_MODE_OUTPUT);
+    gpio_pad_select_gpio(PIN_C);
+    gpio_set_direction(PIN_C, GPIO_MODE_OUTPUT);
+    gpio_pad_select_gpio(PIN_D);
+    gpio_set_direction(PIN_D, GPIO_MODE_OUTPUT);
 
-	while (1) {
-		//calculate Change in Duty Cycle with respect to original
-		int degree = servo_angles[current_angle_index];
-		int delta = degree * (maxValue - minValue) / steps;
-		//Update New Duty Cycle to be used at Channel 0
-		ledc_set_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0, duty + delta);
-		ledc_update_duty(LEDC_HIGH_SPEED_MODE, LEDC_CHANNEL_0);
-		//Increment Angle Index
-		current_angle_index++;
-		//If Angle Index exceed maximum count reset to index 0
-		if (current_angle_index >= SERVO_ANGLE_COUNT)
-			current_angle_index = 0;
-		//Display at Debug Port
-		ESP_LOGD(tag, "Moving Servo at Angle: %d", degree);
-		ESP_LOGD(tag, "Duty Cycle is: %d", duty + delta);
-		//Delay for required Time (SERVO_DELAY)
-		vTaskDelay(SERVO_DELAY / portTICK_PERIOD_MS);
-	} // End loop forever
+    //int step_delay = 60L * 1000L / REV_STEPS / SPEED_RPM;
 
-	vTaskDelete(NULL);
+    while(1) {
+    	for(int i=0; i<REV_STEPS; i+=25){
+			step(25);
+			vTaskDelay(STOP_TIME / portTICK_PERIOD_MS);
+    	}
+    	for(int i=REV_STEPS; i>0; i-=25){
+			step(-25);
+			vTaskDelay(STOP_TIME / portTICK_PERIOD_MS);
+    	}
+    }
 }
 
-void app_main() {
-	xTaskCreate(&moveServo_task, "sweepServo_task", 2048, NULL, 5, NULL);
-	printf("servo sweep task  started\n");
+void step(int steps_to_move)
+{
+	int direction = 0;
+	int steps_left = abs(steps_to_move);
+	if (steps_to_move > 0) { direction = 1; }
+	if (steps_to_move < 0) { direction = 0; }
+	while (steps_left > 0)
+	{
+		if (direction == 1)
+		{
+			step_number++;
+			if (step_number == REV_STEPS) {
+				step_number = 0;
+			}
+		}
+		else
+		{
+			if (step_number == 0) {
+				step_number = REV_STEPS;
+			}
+				step_number--;
+		}
+		// decrement the steps left:
+		steps_left--;
+		stepMotor(step_number % 4);
+		//vTaskDelay(5 / portTICK_PERIOD_MS);
+		delayMicroseconds(step_delay);
+	}
+}
+
+void stepMotor(int thisStep)
+{
+    switch (thisStep) {
+      case 0:  // 1010
+        gpio_set_level(PIN_A, 1);
+        gpio_set_level(PIN_B, 0);
+        gpio_set_level(PIN_C, 1);
+        gpio_set_level(PIN_D, 0);
+      break;
+      case 1:  // 0110
+        gpio_set_level(PIN_A, 0);
+        gpio_set_level(PIN_B, 1);
+        gpio_set_level(PIN_C, 1);
+        gpio_set_level(PIN_D, 0);
+      break;
+      case 2:  //0101
+        gpio_set_level(PIN_A, 0);
+        gpio_set_level(PIN_B, 1);
+        gpio_set_level(PIN_C, 0);
+        gpio_set_level(PIN_D, 1);
+      break;
+      case 3:  //1001
+        gpio_set_level(PIN_A, 1);
+        gpio_set_level(PIN_B, 0);
+        gpio_set_level(PIN_C, 0);
+        gpio_set_level(PIN_D, 1);
+      break;
+    }
+}
+
+unsigned long IRAM_ATTR micros()
+{
+    return (unsigned long) (esp_timer_get_time());
+}
+void IRAM_ATTR delayMicroseconds(uint32_t us)
+{
+    uint32_t m = micros();
+    if(us){
+        uint32_t e = (m + us);
+        if(m > e){ //overflow
+            while(micros() > e){
+                NOP();
+            }
+        }
+        while(micros() < e){
+            NOP();
+        }
+    }
 }
