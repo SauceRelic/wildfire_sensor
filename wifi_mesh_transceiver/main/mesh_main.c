@@ -407,13 +407,19 @@ void app_main(void)
     ESP_ERROR_CHECK(esp_wifi_init(&config));
     ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &ip_event_handler, NULL));
     ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_FLASH));
-    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+    // change wifi protocol for both modes then return to default mode
+    // mesh automatically sets up wifi mode assuming defaults
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
     ESP_ERROR_CHECK(esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_LR));
+    ESP_ERROR_CHECK(esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_LR));
+    ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
     ESP_ERROR_CHECK(esp_wifi_start());
-    // check for correct protocol, should show 8
+    // check for correct protocols, should show 8
     uint8_t protocol_check;
     ESP_ERROR_CHECK(esp_wifi_get_protocol(WIFI_IF_AP, &protocol_check));
-    ESP_LOGI(WIFI_TAG, "Protocol is %u", protocol_check);
+    ESP_LOGI(WIFI_TAG, "softAP protocol is %u", protocol_check);
+    ESP_ERROR_CHECK(esp_wifi_get_protocol(WIFI_IF_STA, &protocol_check));
+    ESP_LOGI(WIFI_TAG, "Station protocol is %u", protocol_check);
     /*  mesh initialization */
     ESP_ERROR_CHECK(esp_mesh_init());
     ESP_ERROR_CHECK(esp_event_handler_register(MESH_EVENT, ESP_EVENT_ANY_ID, &mesh_event_handler, NULL));
