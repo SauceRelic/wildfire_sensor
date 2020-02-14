@@ -92,6 +92,7 @@
  //========================================================================//
  */
 
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_wifi.h"
@@ -103,6 +104,8 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+const char* MAIN_TAG = "main";
 
 int state = 0;
 int next_state = 0;
@@ -246,65 +249,56 @@ void external_update() {
 	if (clr == 1) {
 		//clear screen                            lines[1-5]
 		if (state != 1) {
-			printf("   \n");
-			printf("   \n");
-			printf("   \n");
-			printf("   \n");
-			printf("   \n");
+			ESP_LOGI(MAIN_TAG, "\n\n\n\n\n");
 		} else if (state == 1) {  //display GPS         lines[1-5]
-			printf("   \n");
+			ESP_LOGI(MAIN_TAG, " ");
 			if (GPS == 1) {
 				//display "[GPS Option #1] degrees"     line [2]
-				printf("12.3456\n");
+				ESP_LOGI(MAIN_TAG, "12.3456");
 			} else {
 				//display "[GPS Option #2] degrees"     line [2]
-				printf("13.5791\n");
+				ESP_LOGI(MAIN_TAG, "13.5791");
 			}
-			printf("   \n");
-			printf("   \n");
-			printf("   \n");
+			ESP_LOGI(MAIN_TAG, "\n\n\n");
 		}
 		if (intern_error == 1) {
 			//display "internal error"              line [4]
-			printf("   \n");
-			printf("   \n");
-			printf("   \n");
-			printf("internal error\n");
-			printf("   \n");
+			ESP_LOGI(MAIN_TAG, "\n\n\n");
+			ESP_LOGI(MAIN_TAG, "internal error");
 		}
 	} else {
 		if (cam_angle < 7) {
 			cam_print = cam_angle * 45;
 			//display "[cam_print] degrees"         line [1]
-			printf("%d\n", cam_print);
+			ESP_LOGI(MAIN_TAG, "%d", cam_print);
 		} else {
 			//display "0 degrees"                   line [1]
-			printf("315 degrees\n");
+			ESP_LOGI(MAIN_TAG, "315 degrees");
 		}
 		//display "[tilt_print] degrees"              line [1]
-		printf("0 degrees\n");
+		ESP_LOGI(MAIN_TAG, "0 degrees");
 		if (GPS == 1) {
 			//display "[GPS Option #1] degrees"     line [2]
-			printf("12.3456\n");
+			ESP_LOGI(MAIN_TAG, "12.3456");
 		} else {
 			//display "[GPS Option #2] degrees"     line [2]
-			printf("13.5791\n");
+			ESP_LOGI(MAIN_TAG, "13.5791");
 		}
 		if (comm_error == 1) {
 			//display "connection lost"             line [3]
-			printf("connection lost\n");
+			ESP_LOGI(MAIN_TAG, "connection lost");
 		} else {
 			//display "good connection"             line [3]
-			printf("good connection\n");
+			ESP_LOGI(MAIN_TAG, "good connection");
 		}
 		//display "              "              line [4]
-		printf("   \n");
+		ESP_LOGI(MAIN_TAG, "\n");
 		if (fire_alert == 1) {
 			//display "fire_alert"                  line [5]
-			printf("fire_alert\n");
+			ESP_LOGI(MAIN_TAG, "fire_alert");
 		} else {
 			//display "nothing detected"            line [5]
-			printf("nothing detected\n");
+			ESP_LOGI(MAIN_TAG, "nothing detected");
 		}
 	}
 	vTaskDelay(pdMS_TO_TICKS(2000));
