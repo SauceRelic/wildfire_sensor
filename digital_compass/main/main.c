@@ -14,6 +14,7 @@
 #define PIN_SDA 14
 #define PIN_CLK 16
 #define I2C_ADDRESS 0b0011110
+#define a 283
 
 static char tag[] = "LIS2MDLTR";
 
@@ -112,7 +113,14 @@ void app_main(void){
 		short x = data[1] << 8 | data[0];
 		short y = data[3] << 8 | data[2];
 		short z = data[5] << 8 | data[4];
-		int angle = atan2((double)y,(double)x) * (180 / 3.14159265) + 180; // angle in degrees
+		if(x>a){
+			x=a;
+		}
+		else if(x<(-a)){
+			x=-a;
+		}
+		int angle = (acos((double)x/a))*(180/M_PI);
+		//int angle = atan2((double)y,(double)x) * (180 / 3.14159265) + 180; // angle in degrees
 		//ESP_LOGD(tag, "angle: %d, x: %d, y: %d, z: %d", angle, x, y, z);
 		printf("angle: %d, x: %d, y: %d, z: %d \n", angle, x, y, z);
 		vTaskDelay(pdMS_TO_TICKS(1000));
