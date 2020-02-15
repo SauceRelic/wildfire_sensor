@@ -32,8 +32,8 @@
 /*******************************************************
  *                Variable Definitions
  *******************************************************/
-static const char *MESH_TAG = "mesh_main";
-static const char *WIFI_TAG = "wifi_main";
+static const char* MESH_TAG = "mesh_main";
+static const char* WIFI_TAG = "wifi_main";
 static const uint8_t MESH_ID[6] = { 0x77, 0x77, 0x77, 0x77, 0x77, 0x77};
 static uint8_t tx_buf[TX_SIZE] = { 0, };
 static uint8_t rx_buf[RX_SIZE] = { 0, };
@@ -411,6 +411,7 @@ void app_main(void)
     // mesh automatically sets up wifi mode assuming defaults
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
     ESP_ERROR_CHECK(esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_LR));
+    ESP_ERROR_CHECK(esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_LR));
     ESP_ERROR_CHECK(esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_LR));
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
     ESP_ERROR_CHECK(esp_wifi_start());

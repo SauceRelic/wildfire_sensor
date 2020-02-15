@@ -14,6 +14,7 @@
  */
 
 #include <stdio.h>
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
@@ -24,6 +25,8 @@
 #define GPS_PIN_RXD (16)
 
 #define BUF_SIZE (256)
+
+static char* GPS_TAG = "gps";
 
 //GPS Related Variables
 int Gpsdata;             // for incoming serial data
@@ -134,13 +137,13 @@ void app_main() {
 
 
 	//Read Data from GPS and write to USB Serial Port
-	printf("Starting .... \n");
+	ESP_LOGI(GPS_TAG, "Starting ....");
 	while (1) {
 		feed_gps_data();
 		//printf("Latitude  : %s \n", lat);
-		printf("Numeric Latitude  : %f \n", nlat);
+		ESP_LOGI(GPS_TAG, "Numeric Latitude  : %f", nlat);
 		//printf("Longitude : %s \n", lg);
-		printf("Numeric Longitude : %f \n", nlng);
+		ESP_LOGI(GPS_TAG, "Numeric Longitude : %f\n", nlng);
 		finish = 0;
 	}
 }
