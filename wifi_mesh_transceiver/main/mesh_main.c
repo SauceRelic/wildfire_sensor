@@ -43,7 +43,7 @@ static mesh_addr_t mesh_parent_addr;
 static int mesh_layer = -1;
 
 // message to be sent
-static const uint8_t message[8] = {1, 2, 3, 4, 5, 6, 7, 8};
+static const uint8_t message[8] = {255, 0, 255, 0, 75, 93, 2, 42};
 
 mesh_light_ctl_t light_on = {
     .cmd = MESH_CONTROL_CMD,
@@ -410,6 +410,7 @@ void app_main(void)
     // change wifi protocol for both modes then return to default mode
     // mesh automatically sets up wifi mode assuming defaults
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_APSTA));
+    ESP_ERROR_CHECK(esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_LR));
     ESP_ERROR_CHECK(esp_wifi_set_protocol(WIFI_IF_AP, WIFI_PROTOCOL_LR));
     ESP_ERROR_CHECK(esp_wifi_set_protocol(WIFI_IF_STA, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_LR));
     ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
