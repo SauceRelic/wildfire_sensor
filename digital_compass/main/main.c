@@ -122,7 +122,7 @@ void app_main(void) {
 		//int angle = atan2((double)y,(double)x) * (180 / 3.14159265) + 180; // angle in degrees
 		//ESP_LOGD(tag, "angle: %d, x: %d, y: %d, z: %d", angle, x, y, z);
 		printf("angle: %d, x: %d, y: %d, z: %d \n", angle, x, y, z);
-		int angle = atan2((double) y, (double) x) * (180 / 3.14159265) + 180; // angle in degrees
+		// int angle = atan2((double) y, (double) x) * (180 / 3.14159265) + 180; // angle in degrees
 		ESP_LOGI(tag, "angle: %d, x: %d, y: %d, z: %d", angle, x, y, z);
 		vTaskDelay(pdMS_TO_TICKS(1000));
 	}
