@@ -5,6 +5,7 @@
  *      Author: sanfordij
  */
 #include "driver/i2c.h"
+#include "ESP_I2C.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
