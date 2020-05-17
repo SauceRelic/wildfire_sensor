@@ -1,14 +1,14 @@
 /*
  * Main Controller Testing Program
- * Author: Lin, Yushan
+ * Authors: Lin, Yushan; Hiemenz, Phillip
  * Date: Feb. 10th, 2020
  *
  * GPIO status:
- * GPIO16:  input, pulled up, connected to switch 1.
- * GPIO17:  input, pulled up, connected to switch 2.
+ * GPIO17: input, pulled up, connected to switch 2.
+ * GPIO34: ADC for voltage monitoring.
  *
  * Update: Integrate voltage monitoring into main controller.
- * Date: Mar. 26th, 2020
+ * Date: May 16th, 2020
  *
  */
 
@@ -29,7 +29,6 @@
 #include "driver/adc.h"
 #include "esp_adc_cal.h"
 
-_Bool voltDetect(_Bool flag);
 unsigned int fireDetect(unsigned int angle);
 
 #define DEFAULT_VREF    1100        //Use adc2_vref_to_gpio() to obtain a better estimate
@@ -73,7 +72,6 @@ static void print_char_val_type(esp_adc_cal_value_t val_type)
 }
 
 void app_main(void){
-	gpio_set_direction(16, GPIO_MODE_INPUT);
 	gpio_set_direction(17, GPIO_MODE_INPUT);
 
     printf("Start GPS fix\n");
@@ -81,7 +79,6 @@ void app_main(void){
     int delayTime = rand() % 30;
     vTaskDelay(pdMS_TO_TICKS(delayTime * 1000));
     printf("GPS locked to the satellite\nWaiting time = %d seconds\n", delayTime);
-
 
     unsigned int gpsLat;
     unsigned int gpsLong;
@@ -93,8 +90,7 @@ void app_main(void){
     printf("Latitude: %d\n", gpsLat);
     printf("Longitude: %d\n", gpsLong);
 
-    _Bool voltLevel = false;
-    _Bool voltFlag;
+    unsigned int voltFlag = 0;
     unsigned int fireAngle = 0;
     unsigned int fireFlag;
 
@@ -111,21 +107,40 @@ void app_main(void){
     print_char_val_type(val_type);
 
     while(1){
-        // Get battery voltage level
-        voltFlag = voltDetect(voltLevel);
         printf("Check voltage level\n");
+        uint32_t adc_reading = 0;
+        //Multisampling
+        for (int i = 0; i < NO_OF_SAMPLES; i++) {
+            if (unit == ADC_UNIT_1)
+                adc_reading += adc1_get_raw((adc1_channel_t)channel);
+        }
+        adc_reading /= NO_OF_SAMPLES;
+        //Convert adc_reading to voltage in mV
+        uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
+        //Upscale to pre-divided voltage
+        uint32_t upscaled = voltage * SSF;
+        ESP_LOGI(VM_TAG, "Raw: %d\tVoltage: %d mV\tUpscaled: %d mV", adc_reading, voltage, upscaled);
+        if(upscaled < 10000){
+        	ESP_LOGI(VM_TAG, "LOW VOLTAGE");
+        	voltFlag = 1;
+        }
+        else{
+        	voltFlag = 0;
+        }
+
     	// Get fire detection info
         fireFlag = fireDetect(fireAngle);
         printf("Check fire detection\n");
-    	// Both switches are off
-    	if((voltFlag == false) && (fireFlag == 0)){
+
+
+    	// fireFlag switch is off, voltage level normal
+    	if((voltFlag == 0) && (fireFlag == 0)){
     		printf("Nothing wrong\n");
     		status = 0;
     	}
-    	// Low voltage level switch on
-    	if(voltFlag == true){
-    		// Set low power flag
-    		printf("Low voltage\n");
+
+    	// Low voltage level
+    	if(voltFlag == 1){
     		status = 1;
     	}
 
@@ -134,41 +149,17 @@ void app_main(void){
     		printf("Fire detected\nFire direction: %d degrees\n", fireFlag);
     		status = 2;
     	}
+
     	// Voltage is low and fire detected
-    	if((voltFlag == true) && (fireFlag != 0)){
+    	if((voltFlag == 1) && (fireFlag != 0)){
     		status = 3;
     	}
+
     	printf("Event created. 0x%.4X %.4X %.2X %.4X\n\n", gpsLat, gpsLong, status, fireFlag);
+
     	// Wait 6 seconds to restart the detection cycle
     	vTaskDelay(pdMS_TO_TICKS(6000));
     }
-}
-
-_Bool voltDetect(_Bool flag){
-	if(gpio_get_level(16) == 0){
-		flag = false;
-	}
-	else{
-		flag = true;
-	}
-	return flag;
-
-    uint32_t adc_reading = 0;
-    //Multisampling
-    for (int i = 0; i < NO_OF_SAMPLES; i++) {
-        if (unit == ADC_UNIT_1)
-            adc_reading += adc1_get_raw((adc1_channel_t)channel);
-    }
-    adc_reading /= NO_OF_SAMPLES;
-    //Convert adc_reading to voltage in mV
-    uint32_t voltage = esp_adc_cal_raw_to_voltage(adc_reading, adc_chars);
-    //Upscale to pre-divided voltage
-    uint32_t upscaled = voltage * SSF;
-    ESP_LOGI(VM_TAG, "Raw: %d\tVoltage: %d mV\tUpscaled: %d mV", adc_reading, voltage, upscaled);
-    if(upscaled < 10000)
-    	ESP_LOGI(VM_TAG, "LOW VOLTAGE");
-
-    vTaskDelay(pdMS_TO_TICKS(1000));
 }
 
 unsigned int fireDetect(unsigned int angle){
